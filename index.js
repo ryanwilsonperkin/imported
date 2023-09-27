@@ -6,7 +6,7 @@ const {parse} = require('@babel/parser');
 const {default: traverse} = require('@babel/traverse');
 
 const RESOLVE_DIRS = ['app', 'packages'];
-const RESOLVE_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx'];
+const RESOLVE_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx', 'json'];
 const ALL_FILES_GLOB = '@(app|packages)/**/*.@(ts|tsx|js|jsx)';
 
 function fileExists(filename) {
