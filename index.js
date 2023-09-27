@@ -9,14 +9,26 @@ const RESOLVE_DIRS = ['app', 'packages'];
 const RESOLVE_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx'];
 const ALL_FILES_GLOB = '@(app|packages)/**/*.@(ts|tsx|js|jsx)';
 
+function fileExists(filename) {
+  try {
+    return fs.statSync(filename).isFile();
+  } catch {
+    return false;
+  }
+}
+
 function resolveImportPath(filename, importPath) {
   const filedir = path.dirname(filename);
   if (importPath.startsWith('.')) {
+    // eg ./filename.scss
+    const resolvedExact = path.join(filedir, importPath);
+    if (fileExists(resolvedExact)) return resolvedExact;
+
     for (const extension of RESOLVE_EXTENSIONS) {
       // eg ./filename.ext
-      const resolved = path.join(filedir, `${importPath}.${extension}`);
-      if (fs.existsSync(resolved)) {
-        return resolved;
+      const resolvedWithExtension = path.join(filedir, `${importPath}.${extension}`);
+      if (fileExists(resolvedWithExtension)) {
+        return resolvedWithExtension;
       }
       // eg ./filename/index.ext
       const resolvedIndex = path.join(
@@ -24,7 +36,7 @@ function resolveImportPath(filename, importPath) {
         importPath,
         `index.${extension}`,
       );
-      if (fs.existsSync(resolvedIndex)) {
+      if (fileExists(resolvedIndex)) {
         return resolvedIndex;
       }
     }
@@ -32,15 +44,19 @@ function resolveImportPath(filename, importPath) {
   }
 
   for (const dir of RESOLVE_DIRS) {
+    // eg sections/Foo/filename.scss
+    const resolvedExact = path.join(dir, importPath);
+    if (fileExists(resolvedExact)) return resolvedExact;
+
     for (const extension of RESOLVE_EXTENSIONS) {
       // eg sections/Foo/filename.ext
-      const resolved = path.join(dir, `${importPath}.${extension}`);
-      if (fs.existsSync(resolved)) {
-        return resolved;
+      const resolvedWithExtension = path.join(dir, `${importPath}.${extension}`);
+      if (fileExists(resolvedWithExtension)) {
+        return resolvedWithExtension;
       }
       // eg sections/Foo/filename/index.ext
       const resolvedIndex = path.join(dir, importPath, `index.${extension}`);
-      if (fs.existsSync(resolvedIndex)) {
+      if (fileExists(resolvedIndex)) {
         return resolvedIndex;
       }
     }
