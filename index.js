@@ -9,12 +9,18 @@ const RESOLVE_DIRS = ['app', 'packages'];
 const RESOLVE_EXTENSIONS = ['js', 'jsx', 'ts', 'tsx', 'json'];
 const ALL_FILES_GLOB = '@(app|packages)/**/*.@(ts|tsx|js|jsx)';
 
+const filecache = new Map();
+
 function fileExists(filename) {
+  if (filecache.has(filename)) return filecache.get(filename);
+  let exists;
   try {
-    return fs.statSync(filename).isFile();
+    exists = fs.statSync(filename).isFile();
   } catch {
-    return false;
+    exists = false;
   }
+  filecache.set(filename, exists);
+  return exists;
 }
 
 function resolveRelativeImportPath(directory, importPath) {
