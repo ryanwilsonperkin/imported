@@ -17,51 +17,36 @@ function fileExists(filename) {
   }
 }
 
+function resolveRelativeImportPath(directory, importPath) {
+ // eg. directory/filename
+ const resolvedExact = path.join(directory, importPath);
+ if (fileExists(resolvedExact)) return resolvedExact;
+
+ for (const extension of RESOLVE_EXTENSIONS) {
+   // eg. directory/filename.ext
+   const resolvedWithExtension = path.join(directory, `${importPath}.${extension}`);
+   if (fileExists(resolvedWithExtension)) return resolvedWithExtension;
+
+   // eg. directory/filename/index.ext
+   const resolvedIndex = path.join(
+     directory,
+     importPath,
+     `index.${extension}`,
+   );
+   if (fileExists(resolvedIndex)) return resolvedIndex;
+ }
+ return undefined;
+}
+
 function resolveImportPath(filename, importPath) {
-  const filedir = path.dirname(filename);
   if (importPath.startsWith('.')) {
-    // eg ./filename.scss
-    const resolvedExact = path.join(filedir, importPath);
-    if (fileExists(resolvedExact)) return resolvedExact;
-
-    for (const extension of RESOLVE_EXTENSIONS) {
-      // eg ./filename.ext
-      const resolvedWithExtension = path.join(filedir, `${importPath}.${extension}`);
-      if (fileExists(resolvedWithExtension)) {
-        return resolvedWithExtension;
-      }
-      // eg ./filename/index.ext
-      const resolvedIndex = path.join(
-        filedir,
-        importPath,
-        `index.${extension}`,
-      );
-      if (fileExists(resolvedIndex)) {
-        return resolvedIndex;
-      }
-    }
-    return undefined;
+    const filedir = path.dirname(filename);
+    return resolveRelativeImportPath(filedir, importPath);
   }
-
   for (const dir of RESOLVE_DIRS) {
-    // eg sections/Foo/filename.scss
-    const resolvedExact = path.join(dir, importPath);
-    if (fileExists(resolvedExact)) return resolvedExact;
-
-    for (const extension of RESOLVE_EXTENSIONS) {
-      // eg sections/Foo/filename.ext
-      const resolvedWithExtension = path.join(dir, `${importPath}.${extension}`);
-      if (fileExists(resolvedWithExtension)) {
-        return resolvedWithExtension;
-      }
-      // eg sections/Foo/filename/index.ext
-      const resolvedIndex = path.join(dir, importPath, `index.${extension}`);
-      if (fileExists(resolvedIndex)) {
-        return resolvedIndex;
-      }
-    }
+    const result = resolveRelativeImportPath(dir, importPath);
+    if (result) return result;
   }
-
   return undefined;
 }
 
