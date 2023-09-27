@@ -1,0 +1,8 @@
+{
+  "name": "imported",
+  "version": "0.0.1",
+  "description": "Find out which files are imported",
+  "main": "index.js",
+  "author": "Ryan Wilson-Perkin <ryanwilsonperkin@gmail.com>",
+  "license": "MIT"
+}
