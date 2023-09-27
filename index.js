@@ -7,10 +7,7 @@ const { parse } = require("@babel/parser");
 const { default: traverse } = require("@babel/traverse");
 
 const MODULE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"];
-const MODULE_IGNORES = [
-  "**/*.d.ts",
-  "node_modules/**",
-];
+const MODULE_IGNORES = ["**/*.d.ts", "node_modules/**"];
 const RESOLVE_DIRS = ["app", "packages"];
 const RESOLVE_EXTENSIONS = ["js", "jsx", "ts", "tsx", "json"];
 
@@ -19,12 +16,26 @@ class Searcher {
     this.filecache = new Map();
   }
 
+  listDependencies(patterns) {
+    return this.getAllImports(this.findModules(patterns));
+  }
+
+  listDependants(file, patterns) {
+    const modules = this.findModules(patterns);
+    const dependants = [];
+    for (const filename of modules) {
+      const importPaths = this.getImports(filename);
+      if (importPaths.has(file)) dependants.push(filename);
+    }
+    return dependants;
+  }
+
   findModules(patterns) {
     return glob
       .sync(patterns, { nodir: true, ignore: MODULE_IGNORES })
       .filter((file) => MODULE_EXTENSIONS.includes(path.extname(file)));
   }
-  
+
   fileExists(filename) {
     if (this.filecache.has(filename)) return this.filecache.get(filename);
     let exists;
@@ -36,12 +47,12 @@ class Searcher {
     this.filecache.set(filename, exists);
     return exists;
   }
-  
+
   resolveRelativeImportPath(directory, importPath) {
     // eg. directory/filename
     const resolvedExact = path.join(directory, importPath);
     if (this.fileExists(resolvedExact)) return resolvedExact;
-  
+
     for (const extension of RESOLVE_EXTENSIONS) {
       // eg. directory/filename.ext
       const resolvedWithExtension = path.join(
@@ -49,7 +60,7 @@ class Searcher {
         `${importPath}.${extension}`
       );
       if (this.fileExists(resolvedWithExtension)) return resolvedWithExtension;
-  
+
       // eg. directory/filename/index.ext
       const resolvedIndex = path.join(
         directory,
@@ -60,7 +71,7 @@ class Searcher {
     }
     return undefined;
   }
-  
+
   resolveImportPath(filename, importPath) {
     if (importPath.startsWith(".")) {
       const filedir = path.dirname(filename);
@@ -72,7 +83,7 @@ class Searcher {
     }
     return undefined;
   }
-  
+
   getImports(filename) {
     try {
       const file = fs.readFileSync(filename, { encoding: "utf8" });
@@ -118,7 +129,7 @@ class Searcher {
       throw error;
     }
   }
-  
+
   getAllImports(filenames) {
     const importPaths = new Set();
     filenames.forEach((filename) => {
@@ -131,7 +142,6 @@ class Searcher {
 }
 
 function main() {
-  const searcher = new Searcher();
   yargs
     .scriptName("imported")
     .usage("$0 <cmd> [args]")
@@ -142,17 +152,15 @@ function main() {
         yargs.positional("pattern", {
           type: "string",
           array: true,
-          default: ['**'],
+          default: ["**"],
           describe: "glob pattern of files to find imported dependencies",
         });
       },
       function (argv) {
-        const allFilenames = searcher.findModules(argv.pattern);
-        Array.from(searcher.getAllImports(allFilenames))
-          .sort()
-          .forEach((importPath) => {
-            console.log(importPath);
-          });
+        const searcher = new Searcher();
+        searcher
+          .listDependencies(argv.pattern)
+          .forEach((dependency) => console.log(dependency));
       }
     )
     .command(
@@ -167,16 +175,15 @@ function main() {
         yargs.positional("pattern", {
           type: "string",
           array: true,
-          default: ['**'],
+          default: ["**"],
           describe: "glob pattern of files to find imported dependencies",
         });
       },
       function (argv) {
-        const allFilenames = searcher.findModules(argv.pattern);
-        for (const filename of allFilenames.sort()) {
-          const importPaths = searcher.getImports(filename);
-          if (importPaths.has(argv.file)) console.log(filename);
-        }
+        const searcher = new Searcher();
+        searcher
+          .listDependants(argv.file, argv.pattern)
+          .forEach((dependant) => console.log(dependant));
       }
     )
     .demandCommand()
