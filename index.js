@@ -7,6 +7,10 @@ const { parse } = require("@babel/parser");
 const { default: traverse } = require("@babel/traverse");
 
 const MODULE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx"];
+const MODULE_IGNORES = [
+  "**/*.d.ts",
+  "node_modules/**",
+];
 const RESOLVE_DIRS = ["app", "packages"];
 const RESOLVE_EXTENSIONS = ["js", "jsx", "ts", "tsx", "json"];
 
@@ -14,7 +18,7 @@ const filecache = new Map();
 
 function findModules(...patterns) {
   return glob
-    .sync(patterns, { nodir: true, ignore: "**/*.d.ts" })
+    .sync(patterns, { nodir: true, ignore: MODULE_IGNORES })
     .filter((file) => MODULE_EXTENSIONS.includes(path.extname(file)));
 }
 
