@@ -4,5 +4,10 @@
   "description": "Find out which files are imported",
   "main": "index.js",
   "author": "Ryan Wilson-Perkin <ryanwilsonperkin@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "@babel/traverse": "^7.23.0",
+    "glob": "^10.3.10"
+  }
 }
