@@ -49,7 +49,7 @@ function resolveImportPath(filename, importPath) {
   return undefined;
 }
 
-function getImportedPaths(filename) {
+function getImports(filename) {
   try {
     const file = fs.readFileSync(filename, {encoding: 'utf8'});
     const ast = parse(file, {
@@ -95,29 +95,27 @@ function getImportedPaths(filename) {
   }
 }
 
-function findAllImportedPaths() {
-  const allFilenames = glob.sync(ALL_FILES_GLOB, {
-    nodir: true,
-    ignore: '**/*.d.ts',
-  });
-  const importedPaths = new Set();
-
-  allFilenames.forEach((filename) => {
-    getImportedPaths(filename).forEach((importPath) => {
-      importedPaths.add(importPath);
+function getAllImports(filenames) {
+  const importPaths = new Set();
+  filenames.forEach((filename) => {
+    getImports(filename).forEach((importPath) => {
+      importPaths.add(importPath);
     });
   });
-
-  return importedPaths;
+  return importPaths;
 }
 
 function main() {
   const requestedFile = process.argv[2];
   let importedPaths;
   if (requestedFile) {
-    importedPaths = getImportedPaths(requestedFile);
+    importedPaths = getImports(requestedFile);
   } else {
-    importedPaths = findAllImportedPaths();
+    const allFilenames = glob.sync(ALL_FILES_GLOB, {
+      nodir: true,
+      ignore: '**/*.d.ts',
+    });
+    importedPaths = getAllImports(allFilenames);
   }
   Array.from(importedPaths)
     .sort()
