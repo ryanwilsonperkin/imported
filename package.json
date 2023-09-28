@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Find out which files are imported",
   "main": "index.js",
+  "bin": {
+    "imported": "./bin/imported"
+  },
   "author": "Ryan Wilson-Perkin <ryanwilsonperkin@gmail.com>",
   "license": "MIT",
   "dependencies": {
