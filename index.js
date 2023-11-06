@@ -93,6 +93,7 @@ class Searcher {
       const ast = parse(file, {
         sourceType: "module",
         plugins: ["jsx", "typescript", "decorators"],
+        createImportExpressions: true,
       });
       traverse(ast, {
         // import x from './x';
@@ -108,8 +109,13 @@ class Searcher {
         // import('./x')
         ImportExpression: (nodePath) => {
           if (!nodePath.node.source) return;
-          // Ignore constant template literals, import(`.x`);
-          if (nodePath.node.source.type === "TemplateLiteral") return;
+          if (nodePath.node.source.type !== "StringLiteral") {
+            console.error("Encountered unexpected dynamic import type:", nodePath.node.source.type, {
+              filename,
+              loc: nodePath.node.loc,
+            });
+            return;
+          }
           const rawPath = nodePath.node.source.value;
           const importPath = this.resolveImportPath(filename, rawPath);
           if (importPath && !imports.has(importPath)) {
