@@ -16,15 +16,15 @@ class Searcher {
     this.filecache = new Map();
   }
 
-  listDependencies(patterns) {
-    return this.getAllImports(this.findModules(patterns));
+  listDependencies(patterns, follow) {
+    return this.getAllImports(this.findModules(patterns), follow);
   }
 
   listDependants(file, patterns) {
     const modules = this.findModules(patterns);
     const dependants = [];
     for (const filename of modules) {
-      const importPaths = this.getImports(filename);
+      const importPaths = this.getImports(filename, false);
       if (importPaths.has(file)) dependants.push(filename);
     }
     return dependants;
@@ -84,21 +84,26 @@ class Searcher {
     return undefined;
   }
 
-  getImports(filename) {
+  getImports(filename, follow, imports = new Set()) {
+    // Don't attempt to parse non-module files
+    if (!MODULE_EXTENSIONS.includes(path.extname(filename))) return imports;
+
     try {
       const file = fs.readFileSync(filename, { encoding: "utf8" });
       const ast = parse(file, {
         sourceType: "module",
         plugins: ["jsx", "typescript", "decorators"],
       });
-      const imports = new Set();
       traverse(ast, {
         // import x from './x';
         ImportDeclaration: (nodePath) => {
           if (!nodePath.node.source || !nodePath.node.source.value) return;
           const rawPath = nodePath.node.source.value;
           const importPath = this.resolveImportPath(filename, rawPath);
-          if (importPath) imports.add(importPath);
+          if (importPath && !imports.has(importPath)) {
+            imports.add(importPath);
+            if (follow) this.getImports(importPath, follow, imports);
+          }
         },
         // import('./x')
         ImportExpression: (nodePath) => {
@@ -107,20 +112,29 @@ class Searcher {
           if (nodePath.node.source.type === "TemplateLiteral") return;
           const rawPath = nodePath.node.source.value;
           const importPath = this.resolveImportPath(filename, rawPath);
-          if (importPath) imports.add(importPath);
+          if (importPath && !imports.has(importPath)) {
+            imports.add(importPath);
+            if (follow) this.getImports(importPath, follow, imports);
+          }
         },
         // export { x } from './x';
         ExportNamedDeclaration: (nodePath) => {
           if (!nodePath.node.source || !nodePath.node.source.value) return;
           const rawPath = nodePath.node.source.value;
           const importPath = this.resolveImportPath(filename, rawPath);
-          if (importPath) imports.add(importPath);
+          if (importPath && !imports.has(importPath)) {
+            imports.add(importPath);
+            if (follow) this.getImports(importPath, follow, imports);
+          }
         },
         ExportAllDeclaration: (nodePath) => {
           if (!nodePath.node.source || !nodePath.node.source.value) return;
           const rawPath = nodePath.node.source.value;
           const importPath = this.resolveImportPath(filename, rawPath);
-          if (importPath) imports.add(importPath);
+          if (importPath && !imports.has(importPath)) {
+            imports.add(importPath);
+            if (follow) this.getImports(importPath, follow, imports);
+          }
         },
       });
       return imports;
@@ -130,10 +144,10 @@ class Searcher {
     }
   }
 
-  getAllImports(filenames) {
+  getAllImports(filenames, follow) {
     const importPaths = new Set();
     filenames.forEach((filename) => {
-      this.getImports(filename).forEach((importPath) => {
+      this.getImports(filename, follow).forEach((importPath) => {
         importPaths.add(importPath);
       });
     });
@@ -149,6 +163,11 @@ function main() {
       "ls-dependencies [pattern..]",
       "find all imported dependencies",
       (yargs) => {
+        yargs.option("follow", {
+          type: "boolean",
+          default: false,
+          describe: "whether to follow dependencies",
+        });
         yargs.positional("pattern", {
           type: "string",
           array: true,
@@ -159,7 +178,7 @@ function main() {
       function (argv) {
         const searcher = new Searcher();
         searcher
-          .listDependencies(argv.pattern)
+          .listDependencies(argv.pattern, argv.follow)
           .forEach((dependency) => console.log(dependency));
       }
     )
